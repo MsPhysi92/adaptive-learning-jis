@@ -465,8 +465,9 @@
             });
         }
 
-        // Start screen capture every 3 seconds when registered
+        // Keep connection alive and update status regularly
         let screenCaptureInterval = null;
+        let keepAliveInterval = null;
 
         // Register button
         document.getElementById('btnRegister').addEventListener('click', function() {
@@ -496,6 +497,18 @@
 
             // Start screen capture
             screenCaptureInterval = setInterval(captureScreen, 3000);
+            
+            // Keep-alive ping every 10 seconds (prevents showing as disconnected)
+            keepAliveInterval = setInterval(() => {
+                sendToServer({
+                    type: 'student_update',
+                    studentID: studentData.studentID,
+                    update: { 
+                        status: 'active',
+                        lastSeen: new Date().toISOString()
+                    }
+                });
+            }, 10000);
 
             // Hide registration, show diagnostic
             document.getElementById('phaseReg').classList.remove('active');
@@ -675,7 +688,13 @@
                 }
             });
 
-            showToast(`✅ Level: ${level.toUpperCase()} (${diagCorrectCount}/${totalQuestions} correct)`);
+            const journeyNames = {
+                'basic': 'Foundation Builder',
+                'intermediate': 'Knowledge Explorer',
+                'advanced': 'Concept Master'
+            };
+
+            showToast(`✅ Starting Point: ${journeyNames[level]} (${diagCorrectCount}/${totalQuestions} correct)`);
             
             setTimeout(() => {
                 startLearning();
@@ -685,19 +704,70 @@
         function startLearning() {
             studentData.currentPhase = 'learning';
             
+            // Positive framing for students - NO negative labels!
+            const journeyNames = {
+                'basic': 'Foundation Builder',
+                'intermediate': 'Knowledge Explorer', 
+                'advanced': 'Concept Master'
+            };
+            
+            const journeyDescriptions = {
+                'basic': 'Starting with core concepts - building a strong foundation',
+                'intermediate': 'Connecting ideas - expanding your understanding',
+                'advanced': 'Deep dive - mastering complex relationships'
+            };
+            
+            const journeyEmoji = {
+                'basic': '🌱',
+                'intermediate': '🌿',
+                'advanced': '🌳'
+            };
+            
             const content = document.getElementById('content');
             content.innerHTML = `
                 <div class="phase-container active">
                     <div class="phase-header">
-                        <h2>📚 Your Learning Path</h2>
-                        <p>Content customized for your level</p>
+                        <h2>🗺️ Your Learning Journey</h2>
+                        <p>Every student follows their own path to mastery</p>
                     </div>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <h3 style="color: var(--primary); margin-bottom: 15px;">Your Level:</h3>
-                        <span class="level-badge level-${studentData.level}">${studentData.level.toUpperCase()}</span>
+                    
+                    <div style="background: linear-gradient(135deg, #e6fffa, #b2f5ea); padding: 30px; border-radius: 16px; margin: 20px 0; text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">${journeyEmoji[studentData.level]}</div>
+                        <h3 style="color: var(--primary); font-size: 1.8rem; margin-bottom: 10px;">
+                            Your Starting Point: ${journeyNames[studentData.level]}
+                        </h3>
+                        <p style="color: var(--text); font-size: 1.1rem; margin-top: 10px;">
+                            ${journeyDescriptions[studentData.level]}
+                        </p>
+                        
+                        <div style="margin-top: 25px; padding: 20px; background: white; border-radius: 12px;">
+                            <div style="font-weight: 600; color: var(--primary); margin-bottom: 15px;">
+                                Your Learning Path Today:
+                            </div>
+                            <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;">
+                                <div style="padding: 10px 20px; background: var(--light); border-radius: 8px; border: 2px solid ${studentData.level === 'basic' ? 'var(--accent)' : 'var(--border)'};">
+                                    🌱 Foundation
+                                </div>
+                                <div style="font-size: 1.5rem; color: var(--text-light);">→</div>
+                                <div style="padding: 10px 20px; background: var(--light); border-radius: 8px; border: 2px solid ${studentData.level === 'intermediate' ? 'var(--accent)' : 'var(--border)'};">
+                                    🌿 Exploration
+                                </div>
+                                <div style="font-size: 1.5rem; color: var(--text-light);">→</div>
+                                <div style="padding: 10px 20px; background: var(--light); border-radius: 8px; border: 2px solid ${studentData.level === 'advanced' ? 'var(--accent)' : 'var(--border)'};">
+                                    🌳 Mastery
+                                </div>
+                                <div style="font-size: 1.5rem; color: var(--text-light);">→</div>
+                                <div style="padding: 10px 20px; background: linear-gradient(135deg, var(--success), #48bb78); color: white; border-radius: 8px; font-weight: 700;">
+                                    🎯 Core Together
+                                </div>
+                            </div>
+                            <p style="margin-top: 15px; color: var(--text-light); font-size: 0.9rem;">
+                                ⭐ You're starting at the highlighted step - everyone reaches the Core!
+                            </p>
+                        </div>
                     </div>
+                    
                     ${getLearningContent(studentData.level)}
-                    <button class="btn btn-success" onclick="moveTo('core')">Continue to Core Instruction →</button>
                 </div>
             `;
         }
@@ -713,6 +783,11 @@
                         <p><strong>Sources:</strong> Natural (Sun, stars) and Artificial (bulbs, LEDs)</p>
                         <div class="formula-box">Speed of Light = 3 × 10⁸ m/s</div>
                     </div>
+                    <div class="content-section">
+                        <h3>✅ Check Your Understanding</h3>
+                        <p style="margin-bottom: 20px;">Answer these questions to see if you're ready to advance!</p>
+                        <div id="levelQuiz"></div>
+                    </div>
                 `,
                 intermediate: `
                     <div class="content-section">
@@ -727,6 +802,11 @@
                         <div class="formula-box">c = f × λ<br><small>speed of light = frequency × wavelength</small></div>
                         <p>Higher frequency = shorter wavelength (inverse relationship)</p>
                     </div>
+                    <div class="content-section">
+                        <h3>✅ Check Your Understanding</h3>
+                        <p style="margin-bottom: 20px;">Answer these questions to see if you're ready to advance!</p>
+                        <div id="levelQuiz"></div>
+                    </div>
                 `,
                 advanced: `
                     <div class="content-section">
@@ -738,8 +818,17 @@
                         <p><strong>Precision:</strong> Light speed = 2.997924558 × 10⁸ m/s (error < 0.001%)</p>
                         <div class="highlight-box">For calculations, we use 3.00 × 10⁸ m/s for both vacuum and air.</div>
                     </div>
+                    <div class="content-section">
+                        <h3>✅ Check Your Understanding</h3>
+                        <p style="margin-bottom: 20px;">Answer these questions to test your mastery!</p>
+                        <div id="levelQuiz"></div>
+                    </div>
                 `
             };
+            
+            // Add quiz rendering after content
+            setTimeout(() => renderLevelQuiz(level), 500);
+            
             return content[level];
         }
 
@@ -754,6 +843,138 @@
             if (phase === 'core') {
                 showCoreInstruction();
             }
+        }
+
+        // LEVEL QUIZ SYSTEM - Dynamic progression
+        const levelQuizzes = {
+            basic: [
+                { q: 'Light travels in:', opts: ['Curved lines', 'Straight lines (rays)', 'Circles', 'Zigzags'], correct: 1 },
+                { q: 'What is the speed of light?', opts: ['Very fast', '3 × 10⁸ m/s', '100 km/s', 'Speed of sound'], correct: 1 },
+                { q: 'Which is a natural light source?', opts: ['LED', 'Sun', 'Candle', 'Flashlight'], correct: 1 }
+            ],
+            intermediate: [
+                { q: 'c = f × λ means:', opts: ['Nothing', 'Speed = frequency × wavelength', 'Color = light × time', 'Cannot solve'], correct: 1 },
+                { q: 'What are EM waves made of?', opts: ['Sound', 'Oscillating E and B fields', 'Air vibrations', 'Water'], correct: 1 },
+                { q: 'Visible light wavelength range:', opts: ['1-10 m', '400-700 nm', '1-2 km', '10-20 cm'], correct: 1 }
+            ],
+            advanced: [
+                { q: 'Huygens\' Principle states:', opts: ['Light is fast', 'Wave fronts act as point sources', 'Light is slow', 'Nothing'], correct: 1 },
+                { q: 'Illuminance follows:', opts: ['1/d', '1/d²', 'd²', 'd'], correct: 1 },
+                { q: 'Precise light speed in vacuum:', opts: ['3×10⁸ m/s', '2.997924558×10⁸ m/s', '300,000 m/s', '186,000 mi/s'], correct: 1 }
+            ]
+        };
+
+        let currentLevelQuizIndex = 0;
+        let levelQuizCorrect = 0;
+
+        function renderLevelQuiz(level) {
+            const container = document.getElementById('levelQuiz');
+            if (!container) return;
+
+            const quizzes = levelQuizzes[level];
+            if (currentLevelQuizIndex >= quizzes.length) return;
+
+            const quiz = quizzes[currentLevelQuizIndex];
+            
+            const card = document.createElement('div');
+            card.className = 'question-card';
+
+            const opts = quiz.opts.map((opt, i) => `
+                <div class="option level-quiz-opt" data-index="${i}">
+                    <div class="option-label">${String.fromCharCode(65 + i)}</div>
+                    <div>${opt}</div>
+                </div>
+            `).join('');
+
+            card.innerHTML = `
+                <div class="question-number">Question ${currentLevelQuizIndex + 1} of ${quizzes.length}</div>
+                <div class="question-text">${quiz.q}</div>
+                <div class="options">${opts}</div>
+            `;
+
+            container.innerHTML = '';
+            container.appendChild(card);
+
+            card.querySelectorAll('.level-quiz-opt').forEach(opt => {
+                opt.addEventListener('click', function() {
+                    if (this.classList.contains('answered')) return;
+
+                    const selected = parseInt(this.dataset.index);
+                    const isCorrect = selected === quiz.correct;
+
+                    card.querySelectorAll('.level-quiz-opt').forEach(o => {
+                        o.classList.add('answered');
+                        if (parseInt(o.dataset.index) === quiz.correct) {
+                            o.classList.add('correct');
+                        }
+                    });
+
+                    if (!isCorrect) this.classList.add('incorrect');
+                    if (isCorrect) levelQuizCorrect++;
+
+                    setTimeout(() => {
+                        currentLevelQuizIndex++;
+                        if (currentLevelQuizIndex < quizzes.length) {
+                            renderLevelQuiz(level);
+                        } else {
+                            evaluateLevelProgress(level);
+                        }
+                    }, 1500);
+                });
+            });
+        }
+
+        function evaluateLevelProgress(currentLevel) {
+            const totalQuestions = levelQuizzes[currentLevel].length;
+            const percentage = (levelQuizCorrect / totalQuestions) * 100;
+
+            let nextAction = '';
+            let newLevel = currentLevel;
+
+            // Progression logic
+            if (percentage >= 90 && currentLevel !== 'advanced') {
+                // ADVANCE!
+                newLevel = currentLevel === 'basic' ? 'intermediate' : 'advanced';
+                nextAction = 'advance';
+                showToast(`🎉 Excellent! Advancing to next level!`);
+            } else if (percentage < 50 && currentLevel !== 'basic') {
+                // GO BACK for stronger foundation
+                newLevel = currentLevel === 'advanced' ? 'intermediate' : 'basic';
+                nextAction = 'support';
+                showToast(`📚 Let's strengthen your foundation first!`);
+            } else {
+                // READY FOR CORE
+                nextAction = 'ready';
+                showToast(`✅ Great! Ready for Core Instruction!`);
+            }
+
+            sendToServer({
+                type: 'student_update',
+                studentID: studentData.studentID,
+                update: {
+                    levelQuizScore: Math.round(percentage),
+                    levelTransition: `${currentLevel} → ${newLevel}`,
+                    action: nextAction
+                }
+            });
+
+            setTimeout(() => {
+                if (nextAction === 'ready') {
+                    // Show button to continue to core
+                    const content = document.getElementById('content');
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-success';
+                    btn.textContent = 'Continue to Core Instruction →';
+                    btn.onclick = () => moveTo('core');
+                    content.querySelector('.phase-container').appendChild(btn);
+                } else {
+                    // Reset and show new level
+                    studentData.level = newLevel;
+                    currentLevelQuizIndex = 0;
+                    levelQuizCorrect = 0;
+                    startLearning();
+                }
+            }, 2000);
         }
 
         function showCoreInstruction() {
@@ -787,6 +1008,12 @@
                 update: { currentPhase: 'complete', status: 'Completed' }
             });
 
+            const journeyNames = {
+                'basic': 'Foundation Builder',
+                'intermediate': 'Knowledge Explorer',
+                'advanced': 'Concept Master'
+            };
+
             const content = document.getElementById('content');
             content.innerHTML = `
                 <div class="phase-container active">
@@ -798,9 +1025,12 @@
                         <h2 style="color: var(--primary); margin-bottom: 20px;">Excellent Work!</h2>
                         <p style="font-size: 1.2rem; margin-bottom: 30px;">Your adaptive learning journey has been recorded.</p>
                         <div style="background: var(--light); padding: 30px; border-radius: 12px;">
-                            <p><strong>Starting Level:</strong> ${studentData.level.toUpperCase()}</p>
+                            <p><strong>Your Journey:</strong> ${journeyNames[studentData.level]}</p>
                             <p><strong>Diagnostic Score:</strong> ${studentData.score}%</p>
                             <p><strong>Status:</strong> <span style="color: var(--success);">✓ Completed</span></p>
+                            <p style="margin-top: 20px; color: var(--text-light); font-size: 0.95rem;">
+                                🌟 Every path leads to the same mastery - you did great!
+                            </p>
                         </div>
                     </div>
                 </div>
