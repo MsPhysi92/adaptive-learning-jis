@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -9,6 +10,10 @@ const wss = new WebSocket.Server({ server });
 
 // Serve static files
 app.use(express.static(__dirname));
+app.use(express.json());
+
+// Load PDF generator
+const { generatePDFReport } = require('./pdf-generator.js');
 
 // Store all connected students and teachers
 const students = new Map(); // studentID -> { ws, data }
@@ -179,6 +184,52 @@ app.get('/api/students', (req, res) => {
         allStudents[studentID] = student.data;
     }
     res.json(allStudents);
+});
+
+// API endpoint to generate PDF report
+app.post('/api/generate-pdf', (req, res) => {
+    try {
+        const studentID = req.body.studentID;
+        const student = students.get(studentID);
+        
+        if (!student) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+        
+        const pdfHTML = generatePDFReport(student.data);
+        res.send(pdfHTML);
+    } catch (error) {
+        console.error('PDF generation error:', error);
+        res.status(500).json({ error: 'Failed to generate PDF' });
+    }
+});
+
+// API endpoint to get config
+app.get('/api/config', (req, res) => {
+    try {
+        const configPath = path.join(__dirname, 'config.json');
+        if (fs.existsSync(configPath)) {
+            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            res.json(config);
+        } else {
+            res.status(404).json({ error: 'Config not found' });
+        }
+    } catch (error) {
+        console.error('Config read error:', error);
+        res.status(500).json({ error: 'Failed to read config' });
+    }
+});
+
+// API endpoint to update config
+app.post('/api/config', (req, res) => {
+    try {
+        const configPath = path.join(__dirname, 'config.json');
+        fs.writeFileSync(configPath, JSON.stringify(req.body, null, 2));
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Config write error:', error);
+        res.status(500).json({ error: 'Failed to write config' });
+    }
 });
 
 const PORT = process.env.PORT || 3000;
