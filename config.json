@@ -1,0 +1,53 @@
+{
+  "school": {
+    "name": "Jubail International School",
+    "abbreviation": "JIS",
+    "teacher": "Aalia Shaheen",
+    "logo": "/assets/jis-logo.png"
+  },
+  "adminPassword": "jis2024admin",
+  "grades": {
+    "9": {
+      "name": "Grade 9",
+      "enabled": false,
+      "subjects": {
+        "physics": {
+          "name": "Physics",
+          "topics": []
+        }
+      }
+    },
+    "10": {
+      "name": "Grade 10",
+      "enabled": true,
+      "subjects": {
+        "physics": {
+          "name": "Physics",
+          "topics": [
+            {
+              "id": "g10-physics-ch13",
+              "chapter": "13",
+              "title": "Characteristics of Light",
+              "file": "student.html",
+              "enabled": true,
+              "minQuestions": 10,
+              "maxQuestions": 20,
+              "diagnosticQuestions": 5,
+              "dateAdded": "2024-05-15"
+            }
+          ]
+        }
+      }
+    },
+    "11": {
+      "name": "Grade 11",
+      "enabled": false,
+      "subjects": {
+        "physics": {
+          "name": "Physics",
+          "topics": []
+        }
+      }
+    }
+  }
+}
