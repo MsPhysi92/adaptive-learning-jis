@@ -664,7 +664,8 @@
                 </div>
                 
                 <div style="margin-top: 20px;">
-                    <button class="btn btn-primary" onclick="exportStudentReport('${studentID}')" style="margin-right: 10px;">📥 Export Report</button>
+                    <button class="btn btn-primary" onclick="exportStudentPDF('${studentID}')" style="margin-right: 10px;">📄 Generate PDF Report</button>
+                    <button class="btn btn-primary" onclick="exportStudentReport('${studentID}')" style="margin-right: 10px;">📥 Export TXT</button>
                     <button class="btn btn-success" onclick="emailStudentReport('${studentID}')">📧 Email Report</button>
                 </div>
             `;
@@ -731,6 +732,35 @@
             const report = generateStudentReport(student);
             downloadReport(report, `${student.name.replace(/\s+/g, '-')}-report.txt`);
             addNotification(`✅ Report exported for ${student.name}`, 'success');
+        }
+
+        async function exportStudentPDF(studentID) {
+            try {
+                const response = await fetch('/api/generate-pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ studentID: studentID })
+                });
+                
+                if (!response.ok) throw new Error('PDF generation failed');
+                
+                const html = await response.text();
+                
+                // Open in new window for printing
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(html);
+                printWindow.document.close();
+                
+                // Auto-trigger print dialog
+                setTimeout(() => {
+                    printWindow.print();
+                }, 500);
+                
+                addNotification(`📄 PDF opened for ${students[studentID].name}`, 'success');
+            } catch (error) {
+                console.error('PDF export error:', error);
+                addNotification(`❌ Failed to generate PDF`, 'error');
+            }
         }
 
         function emailStudentReport(studentID) {
