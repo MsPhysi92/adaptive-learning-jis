@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Adaptive Learning System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #ed8936;
+            --success: #38a169;
+            --danger: #e53e3e;
+            --light: #f7fafc;
+            --dark: #1a202c;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 { font-size: 2rem; margin-bottom: 8px; }
+        .header p { color: var(--accent); opacity: 0.9; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .stat-card .label {
+            color: #718096;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .panel-header h2 {
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #48bb78);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #fc8181);
+            color: white;
+        }
+
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #f7fafc;
+            margin-bottom: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent);
+            background: #fef5e7;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--success);
+            background: #e6fffa;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .materials-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .materials-table th {
+            background: var(--light);
+            color: var(--primary);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .materials-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .materials-table tr:hover {
+            background: #f7fafc;
+        }
+
+        .file-icon {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            color: white;
+            border-radius: 6px;
+            text-align: center;
+            line-height: 32px;
+            font-weight: 700;
+            margin-right: 10px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Admin Control Panel</h1>
+            <p>Manage system, upload materials, and monitor performance</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number" id="totalStudents">0</div>
+                <div class="label">Total Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="activeStudents">0</div>
+                <div class="label">Active Sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="completedStudents">0</div>
+                <div class="label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="totalMaterials">0</div>
+                <div class="label">Uploaded Materials</div>
+            </div>
+        </div>
+
+        <!-- Material Upload Section -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>📤 Upload Learning Materials</h2>
+            </div>
+
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                <div style="font-size: 3rem; margin-bottom: 15px;">📁</div>
+                <h3 style="margin-bottom: 10px;">Drop files here or click to upload</h3>
+                <p style="color: #718096;">Supports PDF, DOCX, PPTX, Images, Videos (Max 50MB)</p>
+            </div>
+
+            <input type="file" id="fileInput" style="display: none;" multiple>
+
+            <div id="uploadForm" style="display: none;">
+                <div class="form-group">
+                    <label>Material Title</label>
+                    <input type="text" id="materialTitle" placeholder="e.g., Light Characteristics Video">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="materialDescription" rows="3" placeholder="Brief description of the material..."></textarea>
+                </div>
+                <button class="btn btn-success" onclick="uploadMaterial()">Upload Material</button>
+                <button class="btn" style="background: #718096; color: white; margin-left: 10px;" onclick="cancelUpload()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Materials List -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>📚 Uploaded Materials</h2>
+                <button class="btn btn-primary" onclick="loadMaterials()">🔄 Refresh</button>
+            </div>
+
+            <div id="materialsContainer">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <h3>No materials uploaded yet</h3>
+                    <p>Upload your first learning material above</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Section -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>📊 Export Reports</h2>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <button class="btn btn-success" onclick="exportAllCSV()">📥 Export All Students (CSV)</button>
+                <button class="btn btn-primary" onclick="window.location.href='/teacher.html'">👀 View Live Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        // Drag and drop
+        const uploadArea = document.getElementById('uploadArea');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => {
+                uploadArea.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => {
+                uploadArea.classList.remove('dragover');
+            });
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            document.getElementById('materialTitle').value = file.name;
+            document.getElementById('uploadForm').style.display = 'block';
+            uploadArea.style.display = 'none';
+        }
+
+        function cancelUpload() {
+            selectedFile = null;
+            document.getElementById('uploadForm').style.display = 'none';
+            uploadArea.style.display = 'block';
+            document.getElementById('materialTitle').value = '';
+            document.getElementById('materialDescription').value = '';
+        }
+
+        async function uploadMaterial() {
+            if (!selectedFile) return;
+
+            const title = document.getElementById('materialTitle').value.trim();
+            const description = document.getElementById('materialDescription').value.trim();
+
+            if (!title) {
+                showToast('⚠️ Please enter a title');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('title', title);
+            formData.append('description', description);
+
+            try {
+                const response = await fetch('/api/upload-material', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('✅ Material uploaded successfully!');
+                    cancelUpload();
+                    loadMaterials();
+                } else {
+                    showToast('❌ Upload failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast('❌ Upload failed');
+            }
+        }
+
+        async function loadMaterials() {
+            try {
+                const response = await fetch('/api/materials');
+                
+                // Check if response is ok
+                if (!response.ok) {
+                    console.log('Server returned error:', response.status);
+                    showEmptyMaterials();
+                    return;
+                }
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.log('Server not returning JSON (probably not started)');
+                    showEmptyMaterials();
+                    return;
+                }
+
+                const materials = await response.json();
+
+                const container = document.getElementById('materialsContainer');
+
+                if (materials.length === 0) {
+                    showEmptyMaterials();
+                } else {
+                    const table = `
+                        <table class="materials-table">
+                            <thead>
+                                <tr>
+                                    <th>Material</th>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th>Uploaded</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${materials.map(m => `
+                                    <tr>
+                                        <td>
+                                            <span class="file-icon">${getFileIcon(m.type)}</span>
+                                            <strong>${m.title}</strong>
+                                            ${m.description ? '<br><small style="color: #718096;">' + m.description + '</small>' : ''}
+                                        </td>
+                                        <td>${m.type}</td>
+                                        <td>${formatSize(m.size)}</td>
+                                        <td>${new Date(m.uploadedAt).toLocaleDateString()}</td>
+                                        <td>
+                                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="downloadMaterial('${m.id}')">Download</button>
+                                            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 0.85rem; margin-left: 5px;" onclick="deleteMaterial('${m.id}')">Delete</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    container.innerHTML = table;
+                }
+
+                document.getElementById('totalMaterials').textContent = materials.length;
+            } catch (error) {
+                // Silently fail if server not running
+                console.log('Could not load materials (server may not be running)');
+                showEmptyMaterials();
+            }
+        }
+
+        function showEmptyMaterials() {
+            const container = document.getElementById('materialsContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <h3>No materials uploaded yet</h3>
+                    <p>Upload your first learning material above</p>
+                </div>
+            `;
+        }
+
+        function getFileIcon(type) {
+            if (type.includes('pdf')) return '📄';
+            if (type.includes('word') || type.includes('document')) return '📝';
+            if (type.includes('presentation')) return '📊';
+            if (type.includes('image')) return '🖼️';
+            if (type.includes('video')) return '🎥';
+            return '📁';
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        async function downloadMaterial(id) {
+            window.open(`/api/download/${id}`, '_blank');
+        }
+
+        async function deleteMaterial(id) {
+            if (!confirm('Are you sure you want to delete this material?')) return;
+
+            try {
+                const response = await fetch(`/api/materials/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('✅ Material deleted');
+                    loadMaterials();
+                } else {
+                    showToast('❌ Delete failed');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                showToast('❌ Delete failed');
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/students');
+                
+                // Check if response is ok
+                if (!response.ok) {
+                    console.log('Server returned error:', response.status);
+                    return;
+                }
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.log('Server not returning JSON (probably not started)');
+                    return;
+                }
+
+                const students = await response.json();
+
+                const studentArray = Object.values(students);
+                const active = studentArray.filter(s => s.status === 'Active').length;
+                const completed = studentArray.filter(s => s.status === 'Completed').length;
+
+                document.getElementById('totalStudents').textContent = studentArray.length;
+                document.getElementById('activeStudents').textContent = active;
+                document.getElementById('completedStudents').textContent = completed;
+            } catch (error) {
+                // Silently fail if server not running - this is normal for static file preview
+                console.log('Could not load stats (server may not be running)');
+            }
+        }
+
+        function exportAllCSV() {
+            window.open('/api/csv-all', '_blank');
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Load data on page load
+        loadMaterials();
+        loadStats();
+        setInterval(loadStats, 5000);
+    </script>
+</body>
+</html>

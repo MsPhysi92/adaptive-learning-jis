@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - Real-time Monitoring</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #ed8936;
+            --success: #38a169;
+            --danger: #e53e3e;
+            --light: #f7fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 { font-size: 2rem; margin-bottom: 8px; }
+        .header p { color: var(--accent); opacity: 0.9; }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-header {
+            background: white;
+            color: var(--primary);
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-header:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+
+        .status-badge {
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge.connected { background: #c6f6d5; color: #22543d; }
+        .status-badge.disconnected { background: #fed7d7; color: #742a2a; }
+
+        .students-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .student-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .student-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+
+        .student-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .student-info h3 {
+            color: var(--primary);
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+
+        .student-info .meta {
+            color: #718096;
+            font-size: 0.85rem;
+        }
+
+        .level-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .level-foundation { background: linear-gradient(135deg, #bee3f8, #90cdf4); color: #2c5282; }
+        .level-explorer { background: linear-gradient(135deg, #fbd38d, #f6ad55); color: #7c2d12; }
+        .level-master { background: linear-gradient(135deg, #fc8181, #f56565); color: #742a2a; }
+
+        .progress-section {
+            margin: 15px 0;
+        }
+
+        .progress-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .progress-item .label {
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        .progress-item .value {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .score-pill {
+            background: linear-gradient(135deg, var(--success), #48bb78);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-pdf {
+            background: linear-gradient(135deg, #e53e3e, #fc8181);
+            color: white;
+        }
+
+        .btn-csv {
+            background: linear-gradient(135deg, #38a169, #48bb78);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .empty-state {
+            background: white;
+            border-radius: 12px;
+            padding: 60px;
+            text-align: center;
+            color: #718096;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .students-grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <div>
+                    <h1>👨‍🏫 Teacher Dashboard</h1>
+                    <p>Real-time Student Monitoring & Reports</p>
+                </div>
+                <div>
+                    <span class="status-badge disconnected" id="connectionStatus">
+                        <span id="statusDot">●</span>
+                        Connecting...
+                    </span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-header" onclick="generateSessionPDF()">📄 Session PDF Report</button>
+                <button class="btn-header" onclick="exportSessionCSV()">📊 Export Session CSV</button>
+            </div>
+        </div>
+
+        <div id="studentsContainer" class="students-grid">
+            <div class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <h3>Waiting for students...</h3>
+                <p>Students will appear here when they start their learning journey</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        const students = {};
+
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8080');
+            
+            ws.onopen = () => {
+                updateConnectionStatus(true);
+                console.log('Connected to server');
+                
+                ws.send(JSON.stringify({
+                    type: 'register_teacher'
+                }));
+                
+                ws.send(JSON.stringify({
+                    type: 'request_all_students'
+                }));
+            };
+
+            ws.onclose = () => {
+                updateConnectionStatus(false);
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = () => {
+                updateConnectionStatus(false);
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleServerMessage(data);
+            };
+        }
+
+        function updateConnectionStatus(connected) {
+            const badge = document.getElementById('connectionStatus');
+            const dot = document.getElementById('statusDot');
+            
+            if (connected) {
+                badge.className = 'status-badge connected';
+                badge.innerHTML = '<span id="statusDot">●</span> Connected';
+            } else {
+                badge.className = 'status-badge disconnected';
+                badge.innerHTML = '<span id="statusDot">●</span> Disconnected';
+            }
+        }
+
+        function handleServerMessage(data) {
+            console.log('Received:', data);
+
+            switch(data.type) {
+                case 'all_students':
+                    Object.keys(data.students).forEach(id => {
+                        students[id] = data.students[id];
+                    });
+                    renderStudents();
+                    break;
+
+                case 'new_student':
+                    students[data.student.studentID] = data.student;
+                    renderStudents();
+                    showToast(`✅ ${data.student.name} joined!`);
+                    break;
+
+                case 'student_update':
+                    if (students[data.studentID]) {
+                        students[data.studentID] = { ...students[data.studentID], ...data.update };
+                        renderStudents();
+                    }
+                    break;
+
+                case 'student_complete':
+                    if (students[data.studentID]) {
+                        students[data.studentID] = { ...students[data.studentID], ...data.data };
+                        renderStudents();
+                        showToast(`🎉 ${students[data.studentID].name} completed!`);
+                    }
+                    break;
+
+                case 'student_disconnected':
+                    if (students[data.studentID]) {
+                        delete students[data.studentID];
+                        renderStudents();
+                    }
+                    break;
+            }
+        }
+
+        function renderStudents() {
+            const container = document.getElementById('studentsContainer');
+            const studentArray = Object.values(students);
+
+            if (studentArray.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👥</div>
+                        <h3>Waiting for students...</h3>
+                        <p>Students will appear here when they start their learning journey</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = studentArray.map(student => `
+                <div class="student-card">
+                    <div class="student-header">
+                        <div class="student-info">
+                            <h3>${student.name || 'Unknown'}</h3>
+                            <div class="meta">${student.class || 'N/A'} • ${student.studentID || ''}</div>
+                        </div>
+                        <span class="level-badge level-${student.level || 'foundation'}">
+                            ${getLevelName(student.level)}
+                        </span>
+                    </div>
+
+                    <div class="progress-section">
+                        <div class="progress-item">
+                            <span class="label">Current Phase:</span>
+                            <span class="value">${formatPhase(student.currentPhase)}</span>
+                        </div>
+                        <div class="progress-item">
+                            <span class="label">Diagnostic Score:</span>
+                            <span class="score-pill">${student.diagnosticScore || 0}%</span>
+                        </div>
+                        ${student.levelQuizScore ? `
+                        <div class="progress-item">
+                            <span class="label">Level Quiz:</span>
+                            <span class="score-pill">${student.levelQuizScore}%</span>
+                        </div>
+                        ` : ''}
+                        ${student.comprehensionScore ? `
+                        <div class="progress-item">
+                            <span class="label">Final Score:</span>
+                            <span class="score-pill">${student.comprehensionScore}%</span>
+                        </div>
+                        ` : ''}
+                        <div class="progress-item">
+                            <span class="label">Status:</span>
+                            <span class="value" style="color: ${student.status === 'Completed' ? 'var(--success)' : 'var(--accent)'};">
+                                ${student.status === 'Completed' ? '✓ ' : ''}${student.status || 'Active'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-pdf" onclick="generatePDF('${student.studentID}')">📄 PDF Report</button>
+                        <button class="btn btn-csv" onclick="downloadCSV('${student.studentID}')">📊 CSV Export</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getLevelName(level) {
+            const names = {
+                'foundation': 'Foundation',
+                'explorer': 'Explorer',
+                'master': 'Master',
+                'basic': 'Foundation',
+                'intermediate': 'Explorer',
+                'advanced': 'Master'
+            };
+            return names[level] || level || 'Foundation';
+        }
+
+        function formatPhase(phase) {
+            const phases = {
+                'registration': 'Registration',
+                'diagnostic': 'Diagnostic Test',
+                'level_learning': 'Level Learning',
+                'level_quiz': 'Level Quiz',
+                'core': 'Core Instruction',
+                'comprehension': 'Final Assessment',
+                'complete': 'Complete'
+            };
+            return phases[phase] || phase || 'Unknown';
+        }
+
+        async function generatePDF(studentID) {
+            try {
+                showToast('📄 Generating PDF...');
+                
+                // Open PDF in new window
+                window.open(`/api/pdf/${studentID}`, '_blank');
+                
+                setTimeout(() => {
+                    showToast('✅ PDF opened in new tab!');
+                }, 1000);
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                showToast('❌ PDF generation failed');
+            }
+        }
+
+        function downloadCSV(studentID) {
+            showToast('📊 Downloading CSV...');
+            window.open(`/api/csv/${studentID}`, '_blank');
+        }
+
+        function exportSessionCSV() {
+            showToast('📊 Downloading session CSV...');
+            window.open('/api/csv-all', '_blank');
+        }
+
+        async function generateSessionPDF() {
+            try {
+                showToast('📄 Generating session PDF...');
+                
+                const studentArray = Object.values(students);
+                
+                if (studentArray.length === 0) {
+                    showToast('⚠️ No students to generate report');
+                    return;
+                }
+
+                // Create comprehensive session report
+                const reportWindow = window.open('', '_blank');
+                reportWindow.document.write(generateSessionReportHTML(studentArray));
+                
+                setTimeout(() => {
+                    showToast('✅ Session PDF ready! Print or save from new tab.');
+                }, 1000);
+            } catch (error) {
+                console.error('Session PDF error:', error);
+                showToast('❌ Session PDF generation failed');
+            }
+        }
+
+        function generateSessionReportHTML(studentArray) {
+            const now = new Date();
+            const totalStudents = studentArray.length;
+            const completedStudents = studentArray.filter(s => s.status === 'Completed').length;
+            const activeStudents = studentArray.filter(s => s.status === 'Active').length;
+            
+            const avgDiagnostic = studentArray.reduce((sum, s) => sum + (s.diagnosticScore || 0), 0) / totalStudents;
+            const avgComprehension = studentArray.filter(s => s.comprehensionScore).reduce((sum, s) => sum + s.comprehensionScore, 0) / (completedStudents || 1);
+
+            return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Session Report - ${now.toLocaleDateString()}</title>
+    <style>
+        @page { size: A4; margin: 15mm; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 4px solid #1a365d;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1a365d;
+            font-size: 28pt;
+            margin: 0 0 10px 0;
+        }
+        .header .subtitle {
+            color: #2c5282;
+            font-size: 14pt;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: #f7fafc;
+            border-left: 4px solid #ed8936;
+            padding: 15px;
+            text-align: center;
+        }
+        .summary-card .number {
+            font-size: 32pt;
+            font-weight: 700;
+            color: #1a365d;
+        }
+        .summary-card .label {
+            font-size: 10pt;
+            color: #718096;
+            text-transform: uppercase;
+        }
+        .section-title {
+            background: linear-gradient(135deg, #1a365d, #2c5282);
+            color: white;
+            padding: 12px 20px;
+            font-size: 14pt;
+            font-weight: 700;
+            margin: 30px 0 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th {
+            background: #f7fafc;
+            color: #1a365d;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #1a365d;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        tr:hover { background: #f7fafc; }
+        .level-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 9pt;
+        }
+        .level-foundation { background: #bee3f8; color: #2c5282; }
+        .level-explorer { background: #fbd38d; color: #7c2d12; }
+        .level-master { background: #fc8181; color: #742a2a; }
+        .status-completed { color: #38a169; font-weight: 700; }
+        .status-active { color: #ed8936; font-weight: 700; }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            text-align: center;
+            color: #718096;
+            font-size: 9pt;
+        }
+        @media print {
+            body { margin: 0; padding: 10mm; }
+            .summary-grid { page-break-inside: avoid; }
+            table { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 SESSION REPORT</h1>
+        <div class="subtitle">Adaptive Learning System - Characteristics of Light</div>
+        <div class="subtitle">${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="number">${totalStudents}</div>
+            <div class="label">Total Students</div>
+        </div>
+        <div class="summary-card">
+            <div class="number">${completedStudents}</div>
+            <div class="label">Completed</div>
+        </div>
+        <div class="summary-card">
+            <div class="number">${activeStudents}</div>
+            <div class="label">Active</div>
+        </div>
+    </div>
+
+    <div class="section-title">📈 PERFORMANCE OVERVIEW</div>
+    <table>
+        <tr>
+            <th>Metric</th>
+            <th>Average</th>
+            <th>Range</th>
+        </tr>
+        <tr>
+            <td>Diagnostic Assessment</td>
+            <td><strong>${avgDiagnostic.toFixed(1)}%</strong></td>
+            <td>${Math.min(...studentArray.map(s => s.diagnosticScore || 0))}% - ${Math.max(...studentArray.map(s => s.diagnosticScore || 0))}%</td>
+        </tr>
+        <tr>
+            <td>Final Comprehension</td>
+            <td><strong>${avgComprehension.toFixed(1)}%</strong></td>
+            <td>${completedStudents > 0 ? Math.min(...studentArray.filter(s => s.comprehensionScore).map(s => s.comprehensionScore)) : 0}% - ${completedStudents > 0 ? Math.max(...studentArray.filter(s => s.comprehensionScore).map(s => s.comprehensionScore)) : 0}%</td>
+        </tr>
+    </table>
+
+    <div class="section-title">👥 STUDENT DETAILS</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Student Name</th>
+                <th>Class</th>
+                <th>Level</th>
+                <th>Diagnostic</th>
+                <th>Level Quiz</th>
+                <th>Final Score</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${studentArray.map(s => `
+                <tr>
+                    <td><strong>${s.name || 'Unknown'}</strong></td>
+                    <td>${s.class || 'N/A'}</td>
+                    <td><span class="level-badge level-${s.level || 'foundation'}">${getLevelName(s.level)}</span></td>
+                    <td>${s.diagnosticScore || 0}%</td>
+                    <td>${s.levelQuizScore || '-'}${s.levelQuizScore ? '%' : ''}</td>
+                    <td>${s.comprehensionScore || '-'}${s.comprehensionScore ? '%' : ''}</td>
+                    <td class="status-${s.status === 'Completed' ? 'completed' : 'active'}">${s.status === 'Completed' ? '✓ ' : ''}${s.status || 'Active'}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+
+    <div class="section-title">📊 LEARNING PATH DISTRIBUTION</div>
+    <table>
+        <tr>
+            <th>Learning Path</th>
+            <th>Number of Students</th>
+            <th>Percentage</th>
+        </tr>
+        <tr>
+            <td>Foundation Builder</td>
+            <td>${studentArray.filter(s => (s.level || 'foundation') === 'foundation').length}</td>
+            <td>${((studentArray.filter(s => (s.level || 'foundation') === 'foundation').length / totalStudents) * 100).toFixed(1)}%</td>
+        </tr>
+        <tr>
+            <td>Knowledge Explorer</td>
+            <td>${studentArray.filter(s => s.level === 'explorer').length}</td>
+            <td>${((studentArray.filter(s => s.level === 'explorer').length / totalStudents) * 100).toFixed(1)}%</td>
+        </tr>
+        <tr>
+            <td>Concept Master</td>
+            <td>${studentArray.filter(s => s.level === 'master').length}</td>
+            <td>${((studentArray.filter(s => s.level === 'master').length / totalStudents) * 100).toFixed(1)}%</td>
+        </tr>
+    </table>
+
+    <div class="footer">
+        <p><strong>Adaptive Learning System - JIS</strong></p>
+        <p>Generated on: ${now.toLocaleString()}</p>
+        <p>Total Students: ${totalStudents} | Completed: ${completedStudents} | Active: ${activeStudents}</p>
+    </div>
+</body>
+</html>
+            `;
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Connect on load
+        connectWebSocket();
+    </script>
+</body>
+</html>

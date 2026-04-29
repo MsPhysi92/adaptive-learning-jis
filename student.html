@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Learning - Student Interface</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #ed8936;
+            --accent-light: #fbd38d;
+            --success: #38a169;
+            --warning: #d69e2e;
+            --danger: #e53e3e;
+            --light: #f7fafc;
+            --dark: #1a202c;
+            --text: #2d3748;
+            --text-light: #718096;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; }
+
+        .header {
+            background: linear-gradient(135deg, #1a365d 0%, #2c5282 50%, #234876 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 { font-size: 2rem; margin-bottom: 8px; }
+        .header p { color: var(--accent-light); font-size: 1.1rem; }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e53e3e;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected { background: #38a169; animation: none; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .phase-container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .phase-container.active { display: block; }
+
+        .phase-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .phase-header h2 { font-size: 1.8rem; margin-bottom: 8px; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .level-badge {
+            display: inline-block;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: 700;
+            margin: 10px;
+            font-size: 1.1rem;
+        }
+
+        .level-foundation { background: linear-gradient(135deg, #bee3f8, #90cdf4); color: #2c5282; }
+        .level-explorer { background: linear-gradient(135deg, #fbd38d, #f6ad55); color: #7c2d12; }
+        .level-master { background: linear-gradient(135deg, #fc8181, #f56565); color: #742a2a; }
+
+        .question-card {
+            background: var(--light);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .question-number {
+            background: var(--accent);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .question-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .option:hover:not(.answered) {
+            border-color: var(--accent);
+            transform: translateX(5px);
+        }
+
+        .option.correct {
+            background: linear-gradient(135deg, #f0fff4, #c6f6d5);
+            border-color: var(--success);
+        }
+
+        .option.incorrect {
+            background: linear-gradient(135deg, #fff5f5, #fed7d7);
+            border-color: var(--danger);
+        }
+
+        .option-label {
+            background: var(--primary);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #48bb78);
+            color: white;
+        }
+
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .content-section {
+            margin: 25px 0;
+            line-height: 1.8;
+        }
+
+        .content-section h3 {
+            color: var(--primary);
+            margin: 20px 0 12px;
+        }
+
+        .formula-box {
+            background: linear-gradient(135deg, #e6fffa, #b2f5ea);
+            border-left: 4px solid var(--success);
+            padding: 15px 20px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #fef5e7, #fad7a0);
+            border-left: 4px solid var(--warning);
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+
+        .progress-bar {
+            background: var(--border);
+            height: 8px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, var(--success), #48bb78);
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            body { padding: 10px; }
+            .header { padding: 20px; }
+            .phase-container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting...</span>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Adaptive Learning System</h1>
+            <p>Characteristics of Light - Personalized Journey</p>
+        </div>
+
+        <div id="content">
+            <!-- Registration Phase -->
+            <div class="phase-container active" id="registration">
+                <div class="phase-header">
+                    <h2>👋 Welcome, Student!</h2>
+                    <p>Let's start your personalized learning journey</p>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Your Name</label>
+                        <input type="text" id="studentName" placeholder="Enter your name">
+                    </div>
+                    <div class="form-group">
+                        <label>Class</label>
+                        <input type="text" id="studentClass" placeholder="e.g., 10th Grade">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="startDiagnostic()">Begin Diagnostic Test →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let studentData = {
+            studentID: '',
+            name: '',
+            class: '',
+            diagnosticScore: 0,
+            level: '',
+            currentPhase: 'registration',
+            levelQuizResults: [],
+            comprehensionTests: [],
+            coreCompleted: false,
+            status: 'Active'
+        };
+
+        // WebSocket connection
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8080');
+            
+            ws.onopen = () => {
+                updateStatus(true);
+                console.log('Connected to server');
+            };
+
+            ws.onclose = () => {
+                updateStatus(false);
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = () => updateStatus(false);
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Received:', data);
+            };
+        }
+
+        function updateStatus(connected) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            if (connected) {
+                dot.classList.add('connected');
+                text.textContent = 'Connected';
+            } else {
+                dot.classList.remove('connected');
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        function sendToServer(data) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(data));
+            } else {
+                console.log('Not connected - data would be sent:', data);
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        connectWebSocket();
+
+        // DIAGNOSTIC TEST - 5 questions
+        const diagnosticQuestions = [
+            { q: 'What is light?', opts: ['A liquid', 'A form of energy', 'A solid particle', 'Air movement'], correct: 1 },
+            { q: 'Which travels fastest?', opts: ['Sound', 'Light', 'Water waves', 'Cars'], correct: 1 },
+            { q: 'What does a prism do to white light?', opts: ['Nothing', 'Splits it into colors', 'Makes it darker', 'Stops it'], correct: 1 },
+            { q: 'When light hits a mirror:', opts: ['It stops', 'It reflects', 'It disappears', 'It becomes sound'], correct: 1 },
+            { q: 'The sun is a:', opts: ['Light reflector', 'Light source', 'Light blocker', 'Light absorber'], correct: 1 }
+        ];
+
+        let diagnosticIndex = 0;
+        let diagnosticCorrect = 0;
+
+        function startDiagnostic() {
+            const name = document.getElementById('studentName').value.trim();
+            const cls = document.getElementById('studentClass').value.trim();
+
+            if (!name || !cls) {
+                showToast('⚠️ Please fill in both fields');
+                return;
+            }
+
+            studentData.studentID = 'STU' + Date.now();
+            studentData.name = name;
+            studentData.class = cls;
+            studentData.currentPhase = 'diagnostic';
+
+            sendToServer({
+                type: 'student_registered',
+                studentID: studentData.studentID,
+                name, class: cls
+            });
+
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="phase-container active">
+                    <div class="phase-header">
+                        <h2>📋 Diagnostic Assessment</h2>
+                        <p>5 quick questions to understand your starting point</p>
+                    </div>
+                    <div id="diagnosticQuiz"></div>
+                </div>
+            `;
+
+            renderDiagnosticQuestion();
+        }
+
+        function renderDiagnosticQuestion() {
+            const container = document.getElementById('diagnosticQuiz');
+            if (diagnosticIndex >= diagnosticQuestions.length) {
+                finishDiagnostic();
+                return;
+            }
+
+            const q = diagnosticQuestions[diagnosticIndex];
+            
+            const card = document.createElement('div');
+            card.className = 'question-card';
+
+            const opts = q.opts.map((opt, i) => `
+                <div class="option diag-opt" data-index="${i}">
+                    <div class="option-label">${String.fromCharCode(65 + i)}</div>
+                    <div>${opt}</div>
+                </div>
+            `).join('');
+
+            card.innerHTML = `
+                <div class="question-number">Question ${diagnosticIndex + 1} of 5</div>
+                <div class="question-text">${q.q}</div>
+                <div class="options">${opts}</div>
+            `;
+
+            container.innerHTML = '';
+            container.appendChild(card);
+
+            card.querySelectorAll('.diag-opt').forEach(opt => {
+                opt.addEventListener('click', function() {
+                    if (this.classList.contains('answered')) return;
+
+                    const selected = parseInt(this.dataset.index);
+                    const isCorrect = selected === q.correct;
+
+                    card.querySelectorAll('.diag-opt').forEach(o => {
+                        o.classList.add('answered');
+                        if (parseInt(o.dataset.index) === q.correct) {
+                            o.classList.add('correct');
+                        }
+                    });
+
+                    if (!isCorrect) this.classList.add('incorrect');
+                    if (isCorrect) diagnosticCorrect++;
+
+                    setTimeout(() => {
+                        diagnosticIndex++;
+                        renderDiagnosticQuestion();
+                    }, 1200);
+                });
+            });
+        }
+
+        function finishDiagnostic() {
+            const score = (diagnosticCorrect / diagnosticQuestions.length) * 100;
+            studentData.diagnosticScore = Math.round(score);
+
+            let level = 'foundation';
+            if (score >= 80) level = 'master';
+            else if (score >= 50) level = 'explorer';
+
+            studentData.level = level;
+
+            const levelNames = {
+                'foundation': 'Foundation Builder',
+                'explorer': 'Knowledge Explorer',
+                'master': 'Concept Master'
+            };
+
+            sendToServer({
+                type: 'student_update',
+                studentID: studentData.studentID,
+                update: {
+                    diagnosticScore: studentData.diagnosticScore,
+                    assignedLevel: level
+                }
+            });
+
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="phase-container active">
+                    <div class="phase-header">
+                        <h2>📊 Your Learning Path</h2>
+                        <p>We've identified the best starting point for you</p>
+                    </div>
+                    <div class="content-section" style="text-align: center;">
+                        <h3 style="margin-bottom: 20px;">Diagnostic Score: ${studentData.diagnosticScore}%</h3>
+                        <div class="level-badge level-${level}">${levelNames[level]}</div>
+                        <p style="margin-top: 25px; font-size: 1.05rem;">
+                            You'll start with content tailored to your current understanding.
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" onclick="startLearning()">Begin Learning Journey →</button>
+                </div>
+            `;
+        }
+
+        // ADAPTIVE LEVEL CONTENT
+        function startLearning() {
+            studentData.currentPhase = 'level_learning';
+            const level = studentData.level;
+
+            const content = getLevelContent(level);
+            
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = `
+                <div class="phase-container active">
+                    <div class="phase-header">
+                        <h2>${content.title}</h2>
+                        <p>${content.subtitle}</p>
+                    </div>
+                    <div class="content-section">
+                        ${content.html}
+                    </div>
+                    <button class="btn btn-primary" onclick="startLevelQuiz('${level}')">Ready for Comprehension Test →</button>
+                </div>
+            `;
+        }
+
+        function getLevelContent(level) {
+            const content = {
+                foundation: {
+                    title: '🌟 Foundation Level',
+                    subtitle: 'Building blocks of light',
+                    html: `
+                        <h3>What is Light?</h3>
+                        <p>Light is a form of <strong>energy</strong> that travels in straight lines called <strong>rays</strong>.</p>
+                        
+                        <h3>Light Sources</h3>
+                        <p><strong>Natural sources:</strong> Sun, stars, fire</p>
+                        <p><strong>Artificial sources:</strong> Bulbs, LEDs, screens</p>
+                        
+                        <h3>Basic Properties</h3>
+                        <p>✓ Light travels very fast (fastest thing in universe!)</p>
+                        <p>✓ Light can bounce off surfaces (reflection)</p>
+                        <p>✓ Light can pass through clear materials (transmission)</p>
+                        <p>✓ Light can bend when entering different materials (refraction)</p>
+                        
+                        <div class="highlight-box">
+                            <strong>Remember:</strong> Light always travels in straight lines unless something changes its path!
+                        </div>
+                    `
+                },
+                explorer: {
+                    title: '🔬 Explorer Level',
+                    subtitle: 'Understanding electromagnetic waves',
+                    html: `
+                        <h3>Light as an Electromagnetic Wave</h3>
+                        <p>Light is part of the <strong>electromagnetic spectrum</strong> - a family of waves that includes radio, microwaves, and X-rays.</p>
+                        
+                        <div class="formula-box">c = f × λ</div>
+                        <p>Where: <strong>c</strong> = speed of light (3 × 10⁸ m/s), <strong>f</strong> = frequency, <strong>λ</strong> = wavelength</p>
+                        
+                        <h3>The EM Spectrum (low to high energy)</h3>
+                        <p>Radio → Microwave → Infrared → <span style="background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold;">Visible Light</span> → Ultraviolet → X-rays → Gamma rays</p>
+                        
+                        <h3>Visible Light Range</h3>
+                        <p>Wavelength: <strong>400-700 nanometers (nm)</strong></p>
+                        <p>Red light: ~700 nm | Violet light: ~400 nm</p>
+                        
+                        <div class="highlight-box">
+                            <strong>Key Insight:</strong> All EM waves travel at the same speed in vacuum, but differ in wavelength and frequency.
+                        </div>
+                    `
+                },
+                master: {
+                    title: '🎓 Master Level',
+                    subtitle: 'Advanced wave principles',
+                    html: `
+                        <h3>Huygens' Principle</h3>
+                        <p>Every point on a wave front acts as a source of secondary wavelets. The new wave front is the tangent to all these wavelets.</p>
+                        <p><em>This principle explains diffraction and interference patterns.</em></p>
+                        
+                        <h3>Illuminance and Intensity</h3>
+                        <div class="formula-box">I = P / (4πr²)</div>
+                        <p>Light intensity follows the <strong>inverse square law</strong>: brightness decreases as 1/d²</p>
+                        <p>Double the distance → ¼ the brightness</p>
+                        
+                        <h3>Precise Constants</h3>
+                        <p><strong>Speed of light in vacuum:</strong> c = 2.99792458 × 10⁸ m/s (exact)</p>
+                        <p><strong>Planck's constant:</strong> h = 6.626 × 10⁻³⁴ J·s</p>
+                        <p><strong>Energy of a photon:</strong> E = hf</p>
+                        
+                        <div class="highlight-box">
+                            <strong>Advanced Concept:</strong> Light exhibits wave-particle duality - it behaves as both waves and particles (photons) depending on the experiment.
+                        </div>
+                    `
+                }
+            };
+            
+            return content[level];
+        }
+
+        // LEVEL COMPREHENSION TEST - 10 QUESTIONS
+        const levelQuizzes = {
+            foundation: [
+                { q: 'Light is a form of:', opts: ['Matter', 'Energy', 'Gas', 'Liquid'], correct: 1 },
+                { q: 'Light travels in:', opts: ['Curved lines', 'Straight lines (rays)', 'Circles', 'Random paths'], correct: 1 },
+                { q: 'Which is a natural light source?', opts: ['LED bulb', 'The Sun', 'Flashlight', 'Screen'], correct: 1 },
+                { q: 'When light bounces off a mirror, it is called:', opts: ['Transmission', 'Reflection', 'Absorption', 'Refraction'], correct: 1 },
+                { q: 'What happens when light passes through glass?', opts: ['It stops', 'It is transmitted', 'It turns into sound', 'It becomes heat'], correct: 1 },
+                { q: 'Light bends when entering water. This is called:', opts: ['Reflection', 'Diffraction', 'Refraction', 'Absorption'], correct: 2 },
+                { q: 'Which material blocks light completely?', opts: ['Glass', 'Water', 'Wood', 'Air'], correct: 2 },
+                { q: 'The speed of light is:', opts: ['Slow', 'Very fast', 'Same as sound', 'Zero'], correct: 1 },
+                { q: 'A rainbow is formed by:', opts: ['Light splitting into colors', 'Magic', 'Sound waves', 'Heat'], correct: 0 },
+                { q: 'Shadows are formed when:', opts: ['Light is blocked', 'Light bends', 'Light speeds up', 'Nothing happens'], correct: 0 }
+            ],
+            explorer: [
+                { q: 'Light is part of:', opts: ['Sound spectrum', 'Electromagnetic spectrum', 'Water waves', 'Air pressure'], correct: 1 },
+                { q: 'The equation c = f × λ relates:', opts: ['Color and brightness', 'Speed, frequency, and wavelength', 'Heat and light', 'Sound and light'], correct: 1 },
+                { q: 'What is the speed of light in vacuum?', opts: ['100 m/s', '3 × 10⁸ m/s', '340 m/s', '1000 km/h'], correct: 1 },
+                { q: 'Visible light wavelength range is:', opts: ['1-10 m', '400-700 nm', '1-100 km', '10-20 cm'], correct: 1 },
+                { q: 'Which has the longest wavelength in EM spectrum?', opts: ['Gamma rays', 'X-rays', 'Radio waves', 'UV light'], correct: 2 },
+                { q: 'Red light has a wavelength of about:', opts: ['400 nm', '550 nm', '700 nm', '900 nm'], correct: 2 },
+                { q: 'Electromagnetic waves are made of:', opts: ['Sound vibrations', 'Oscillating electric and magnetic fields', 'Water molecules', 'Air particles'], correct: 1 },
+                { q: 'All EM waves in vacuum travel at:', opts: ['Different speeds', 'The same speed (c)', 'Infinite speed', 'Zero speed'], correct: 1 },
+                { q: 'Which has more energy: UV or infrared?', opts: ['Infrared', 'UV (ultraviolet)', 'Both equal', 'Neither has energy'], correct: 1 },
+                { q: 'The frequency of light determines its:', opts: ['Speed', 'Color/energy', 'Volume', 'Temperature'], correct: 1 }
+            ],
+            master: [
+                { q: 'Huygens\' Principle states that:', opts: ['Light is a particle', 'Every point on a wave front acts as a source of secondary wavelets', 'Light cannot diffract', 'Waves travel in circles'], correct: 1 },
+                { q: 'Light intensity follows which law?', opts: ['Linear law (1/d)', 'Inverse square law (1/d²)', 'Exponential law', 'Constant law'], correct: 1 },
+                { q: 'The exact speed of light in vacuum is:', opts: ['3.00 × 10⁸ m/s', '2.99792458 × 10⁸ m/s', '2.50 × 10⁸ m/s', '4.00 × 10⁸ m/s'], correct: 1 },
+                { q: 'Energy of a photon is given by:', opts: ['E = mc²', 'E = hf', 'E = ½mv²', 'E = mgh'], correct: 1 },
+                { q: 'If distance from light source doubles, intensity becomes:', opts: ['Half', 'Quarter (¼)', 'Double', 'Same'], correct: 1 },
+                { q: 'Planck\'s constant (h) is approximately:', opts: ['6.626 × 10⁻³⁴ J·s', '3.00 × 10⁸ m/s', '9.8 m/s²', '1.6 × 10⁻¹⁹ C'], correct: 0 },
+                { q: 'Wave-particle duality means:', opts: ['Light is only a wave', 'Light behaves as both wave and particle', 'Light is neither wave nor particle', 'Light is only a particle'], correct: 1 },
+                { q: 'Diffraction is best explained by:', opts: ['Particle theory', 'Wave theory (Huygens)', 'Geometric optics', 'Ray theory'], correct: 1 },
+                { q: 'Which has higher frequency: blue or red light?', opts: ['Red', 'Blue', 'Same', 'Neither has frequency'], correct: 1 },
+                { q: 'The formula I = P/(4πr²) describes:', opts: ['Voltage', 'Illuminance from point source', 'Temperature', 'Pressure'], correct: 1 }
+            ]
+        };
+
+        let currentLevelQuizIndex = 0;
+        let levelQuizCorrect = 0;
+        let levelQuizAnswers = [];
+
+        function startLevelQuiz(level) {
+            studentData.currentPhase = 'level_quiz';
+            currentLevelQuizIndex = 0;
+            levelQuizCorrect = 0;
+            levelQuizAnswers = [];
+
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="phase-container active">
+                    <div class="phase-header">
+                        <h2>✅ Comprehension Test</h2>
+                        <p>10 questions to check your understanding</p>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="quizProgress" style="width: 0%"></div>
+                    </div>
+                    <div id="levelQuiz"></div>
+                </div>
+            `;
+
+            renderLevelQuiz(level);
+        }
+
+        function renderLevelQuiz(level) {
+            const container = document.getElementById('levelQuiz');
+            const quizzes = levelQuizzes[level];
+            
+            if (currentLevelQuizIndex >= quizzes.length) {
+                evaluateLevelProgress(level);
+                return;
+            }
+
+            const quiz = quizzes[currentLevelQuizIndex];
+            const progress = ((currentLevelQuizIndex + 1) / quizzes.length) * 100;
+            document.getElementById('quizProgress').style.width = progress + '%';
+            
+            const card = document.createElement('div');
+            card.className = 'question-card';
+
+            const opts = quiz.opts.map((opt, i) => `
+                <div class="option level-quiz-opt" data-index="${i}">
+                    <div class="option-label">${String.fromCharCode(65 + i)}</div>
+                    <div>${opt}</div>
+                </div>
+            `).join('');
+
+            card.innerHTML = `
+                <div class="question-number">Question ${currentLevelQuizIndex + 1} of 10</div>
+                <div class="question-text">${quiz.q}</div>
+                <div class="options">${opts}</div>
+            `;
+
+            container.innerHTML = '';
+            container.appendChild(card);
+
+            card.querySelectorAll('.level-quiz-opt').forEach(opt => {
+                opt.addEventListener('click', function() {
+                    if (this.classList.contains('answered')) return;
+
+                    const selected = parseInt(this.dataset.index);
+                    const isCorrect = selected === quiz.correct;
+
+                    levelQuizAnswers.push({
+                        question: currentLevelQuizIndex + 1,
+                        correct: isCorrect
+                    });
+
+                    card.querySelectorAll('.level-quiz-opt').forEach(o => {
+                        o.classList.add('answered');
+                        if (parseInt(o.dataset.index) === quiz.correct) {
+                            o.classList.add('correct');
+                        }
+                    });
+
+                    if (!isCorrect) this.classList.add('incorrect');
+                    if (isCorrect) levelQuizCorrect++;
+
+                    setTimeout(() => {
+                        currentLevelQuizIndex++;
+                        renderLevelQuiz(level);
+                    }, 1200);
+                });
+            });
+        }
+
+        function evaluateLevelProgress(currentLevel) {
+            const totalQuestions = 10;
+            const percentage = (levelQuizCorrect / totalQuestions) * 100;
+
+            studentData.levelQuizResults.push({
+                level: currentLevel,
+                score: Math.round(percentage),
+                answers: levelQuizAnswers
+            });
+
+            let nextAction = '';
+            let newLevel = currentLevel;
+
+            // ADAPTIVE LOGIC
+            if (percentage >= 80 && currentLevel !== 'master') {
+                // ADVANCE to next level
+                newLevel = currentLevel === 'foundation' ? 'explorer' : 'master';
+                nextAction = 'advance';
+                showToast(`🎉 Excellent! Moving to next level!`);
+            } else if (percentage < 50 && currentLevel !== 'foundation') {
+                // STEP BACK for stronger foundation
+                newLevel = currentLevel === 'master' ? 'explorer' : 'foundation';
+                nextAction = 'support';
+                showToast(`📚 Let's strengthen foundations first!`);
+            } else {
+                // CONTINUE TO CORE
+                nextAction = 'ready';
+                showToast(`✅ Great job! Moving to core instruction!`);
+            }
+
+            sendToServer({
+                type: 'student_update',
+                studentID: studentData.studentID,
+                update: {
+                    levelQuizScore: Math.round(percentage),
+                    levelTransition: `${currentLevel} → ${newLevel}`,
+                    action: nextAction
+                }
+            });
+
+            setTimeout(() => {
+                if (nextAction === 'ready') {
+                    moveToCoreInstruction();
+                } else {
+                    // Reset and show new level
+                    studentData.level = newLevel;
+                    currentLevelQuizIndex = 0;
+                    levelQuizCorrect = 0;
+                    levelQuizAnswers = [];
+                    startLearning();
+                }
+            }, 2000);
+        }
+
+        function moveToCoreInstruction() {
+            studentData.currentPhase = 'core';
+            
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="phase-container active">
+                    <div class="phase-header" style="background: linear-gradient(135deg, var(--success), #48bb78);">
+                        <h2>🎯 CORE INSTRUCTION</h2>
+                        <p>Essential concepts for all students</p>
+                    </div>
+                    <div class="content-section">
+                        <h3>Universal Characteristics of Light</h3>
+                        
+                        <p><strong>1. Electromagnetic Nature:</strong> Light consists of oscillating electric and magnetic fields perpendicular to each other and to the direction of propagation.</p>
+                        
+                        <div class="formula-box">c = f × λ = 3.00 × 10⁸ m/s</div>
+                        
+                        <p><strong>2. The Electromagnetic Spectrum:</strong></p>
+                        <p>Radio → Microwave → Infrared → Visible (400-700 nm) → Ultraviolet → X-ray → Gamma ray</p>
+                        
+                        <p><strong>3. Huygens' Principle:</strong> Every point on a wave front can be considered as a source of secondary wavelets. This explains diffraction and interference.</p>
+                        
+                        <p><strong>4. Inverse Square Law:</strong> Illuminance (brightness) from a point source decreases as 1/d²</p>
+                        
+                        <div class="highlight-box">
+                            <strong>Key Fact:</strong> All electromagnetic waves travel at the speed of light in vacuum, differing only in wavelength and frequency. Light exhibits wave-particle duality.
+                        </div>
+                    </div>
+                    <button class="btn btn-success" onclick="startComprehensionTest()">Take Final Comprehension Test →</button>
+                </div>
+            `;
+        }
+
+        // FINAL COMPREHENSION TEST - 10 questions on core concepts
+        const comprehensionQuestions = [
+            { q: 'Light is an electromagnetic wave consisting of:', opts: ['Only electric fields', 'Oscillating electric and magnetic fields', 'Only magnetic fields', 'Sound waves'], correct: 1 },
+            { q: 'The relationship c = f × λ tells us:', opts: ['Speed = frequency × wavelength', 'Color = frequency × time', 'Speed = distance / time', 'Energy = mass × speed'], correct: 0 },
+            { q: 'The visible light range is approximately:', opts: ['100-200 nm', '400-700 nm', '1000-2000 nm', '10-50 nm'], correct: 1 },
+            { q: 'Which part of EM spectrum has highest frequency?', opts: ['Radio waves', 'Visible light', 'Gamma rays', 'Microwaves'], correct: 2 },
+            { q: 'Huygens\' Principle explains:', opts: ['Only reflection', 'Diffraction and interference', 'Only refraction', 'Absorption'], correct: 1 },
+            { q: 'Illuminance follows which law?', opts: ['Direct proportionality (d)', 'Inverse square (1/d²)', 'Exponential decay', 'Logarithmic'], correct: 1 },
+            { q: 'All EM waves in vacuum travel at:', opts: ['Different speeds depending on frequency', 'The same speed (c = 3×10⁸ m/s)', 'Speed of sound', 'Infinite speed'], correct: 1 },
+            { q: 'Light exhibits:', opts: ['Only wave properties', 'Only particle properties', 'Wave-particle duality', 'Neither wave nor particle'], correct: 2 },
+            { q: 'If distance from a light source doubles, brightness becomes:', opts: ['Half', 'Quarter (¼)', 'Double', 'Unchanged'], correct: 1 },
+            { q: 'The energy of a photon depends on its:', opts: ['Speed', 'Frequency', 'Distance traveled', 'Direction'], correct: 1 }
+        ];
+
+        let comprehensionIndex = 0;
+        let comprehensionCorrect = 0;
+        let comprehensionAnswers = [];
+
+        function startComprehensionTest() {
+            studentData.currentPhase = 'comprehension';
+            comprehensionIndex = 0;
+            comprehensionCorrect = 0;
+            comprehensionAnswers = [];
+
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="phase-container active">
+                    <div class="phase-header" style="background: linear-gradient(135deg, #805ad5, #6b46c1);">
+                        <h2>🏆 Final Comprehension Assessment</h2>
+                        <p>10 questions on core concepts - Demonstrate your mastery!</p>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="comprehensionProgress" style="width: 0%"></div>
+                    </div>
+                    <div id="comprehensionQuiz"></div>
+                </div>
+            `;
+
+            renderComprehensionQuestion();
+        }
+
+        function renderComprehensionQuestion() {
+            const container = document.getElementById('comprehensionQuiz');
+            
+            if (comprehensionIndex >= comprehensionQuestions.length) {
+                finishComprehension();
+                return;
+            }
+
+            const quiz = comprehensionQuestions[comprehensionIndex];
+            const progress = ((comprehensionIndex + 1) / comprehensionQuestions.length) * 100;
+            document.getElementById('comprehensionProgress').style.width = progress + '%';
+            
+            const card = document.createElement('div');
+            card.className = 'question-card';
+
+            const opts = quiz.opts.map((opt, i) => `
+                <div class="option comp-opt" data-index="${i}">
+                    <div class="option-label">${String.fromCharCode(65 + i)}</div>
+                    <div>${opt}</div>
+                </div>
+            `).join('');
+
+            card.innerHTML = `
+                <div class="question-number">Question ${comprehensionIndex + 1} of 10</div>
+                <div class="question-text">${quiz.q}</div>
+                <div class="options">${opts}</div>
+            `;
+
+            container.innerHTML = '';
+            container.appendChild(card);
+
+            card.querySelectorAll('.comp-opt').forEach(opt => {
+                opt.addEventListener('click', function() {
+                    if (this.classList.contains('answered')) return;
+
+                    const selected = parseInt(this.dataset.index);
+                    const isCorrect = selected === quiz.correct;
+
+                    comprehensionAnswers.push({
+                        question: comprehensionIndex + 1,
+                        correct: isCorrect
+                    });
+
+                    card.querySelectorAll('.comp-opt').forEach(o => {
+                        o.classList.add('answered');
+                        if (parseInt(o.dataset.index) === quiz.correct) {
+                            o.classList.add('correct');
+                        }
+                    });
+
+                    if (!isCorrect) this.classList.add('incorrect');
+                    if (isCorrect) comprehensionCorrect++;
+
+                    setTimeout(() => {
+                        comprehensionIndex++;
+                        renderComprehensionQuestion();
+                    }, 1200);
+                });
+            });
+        }
+
+        function finishComprehension() {
+            const percentage = (comprehensionCorrect / comprehensionQuestions.length) * 100;
+            
+            studentData.comprehensionTests.push({
+                score: Math.round(percentage),
+                answers: comprehensionAnswers
+            });
+            studentData.coreCompleted = true;
+            studentData.currentPhase = 'complete';
+            studentData.status = 'Completed';
+
+            sendToServer({
+                type: 'student_complete',
+                studentID: studentData.studentID,
+                finalData: {
+                    comprehensionScore: Math.round(percentage),
+                    status: 'Completed',
+                    completionTime: new Date().toISOString()
+                }
+            });
+
+            const levelNames = {
+                'foundation': 'Foundation Builder',
+                'explorer': 'Knowledge Explorer',
+                'master': 'Concept Master'
+            };
+
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="phase-container active">
+                    <div class="phase-header" style="background: linear-gradient(135deg, var(--success), #48bb78);">
+                        <h2>🎉 Learning Journey Complete!</h2>
+                        <p>Your results have been sent to your teacher</p>
+                    </div>
+                    <div class="content-section" style="text-align: center; padding: 40px 20px;">
+                        <h2 style="color: var(--primary); margin-bottom: 30px;">Congratulations, ${studentData.name}!</h2>
+                        
+                        <div style="background: var(--light); padding: 30px; border-radius: 12px; margin-bottom: 25px;">
+                            <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Your Learning Path:</strong> ${levelNames[studentData.level]}</p>
+                            <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Diagnostic Score:</strong> ${studentData.diagnosticScore}%</p>
+                            <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Comprehension Score:</strong> ${Math.round(percentage)}%</p>
+                            <p style="font-size: 1.1rem;"><strong>Status:</strong> <span style="color: var(--success); font-weight: 700;">✓ Completed</span></p>
+                        </div>
+
+                        <div class="highlight-box" style="text-align: left;">
+                            <strong>What You've Achieved:</strong>
+                            <p>✓ Personalized diagnostic assessment</p>
+                            <p>✓ Adaptive level-based learning</p>
+                            <p>✓ 10-question comprehension verification</p>
+                            <p>✓ Core instruction mastery</p>
+                            <p>✓ Final assessment completion</p>
+                        </div>
+
+                        <p style="margin-top: 30px; color: var(--text-light); font-size: 1rem;">
+                            🌟 Every student's path is unique, but all lead to the same understanding!
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            showToast('🎉 Journey complete! Great work!');
+        }
+
+        // Download student report as CSV
+        function downloadReport() {
+            const csv = generateCSVReport();
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${studentData.studentID}_report.csv`;
+            a.click();
+        }
+
+        function generateCSVReport() {
+            let csv = 'Student Report\n\n';
+            csv += `Student ID,${studentData.studentID}\n`;
+            csv += `Name,${studentData.name}\n`;
+            csv += `Class,${studentData.class}\n`;
+            csv += `Diagnostic Score,${studentData.diagnosticScore}%\n`;
+            csv += `Assigned Level,${studentData.level}\n\n`;
+            
+            csv += 'Level Quiz Results\n';
+            csv += 'Level,Score\n';
+            studentData.levelQuizResults.forEach(r => {
+                csv += `${r.level},${r.score}%\n`;
+            });
+            
+            csv += '\nComprehension Tests\n';
+            csv += 'Test,Score\n';
+            studentData.comprehensionTests.forEach((t, i) => {
+                csv += `Test ${i+1},${t.score}%\n`;
+            });
+            
+            csv += `\nStatus,${studentData.status}\n`;
+            
+            return csv;
+        }
+    </script>
+</body>
+</html>
